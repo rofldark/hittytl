@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>HITTY – Thomas &amp; Liza Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #000000;
+      --green: #39FF14;
+      --cyan: #00E5FF;
+      --green-dim: rgba(57,255,20,0.15);
+      --cyan-dim: rgba(0,229,255,0.15);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--black);
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      overflow: hidden;
+    }
+
+    /* ─── SCREENS ─── */
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 24px);
+      text-align: center;
+    }
+    .screen.active { display: flex; }
+
+    /* ─── LOGO ─── */
+    .hitty-logo {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: clamp(52px, 18vw, 96px);
+      letter-spacing: -2px;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--green) 40%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 18px rgba(57,255,20,0.7)) drop-shadow(0 0 40px rgba(0,229,255,0.4));
+    }
+    .hitty-sub {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      opacity: 0.8;
+      margin-top: 6px;
+    }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px 36px;
+      border: none;
+      border-radius: 50px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 18px;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.12s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .btn:active { transform: scale(0.96); }
+
+    .btn-green {
+      background: var(--green);
+      color: #000;
+      box-shadow: 0 0 20px rgba(57,255,20,0.5), 0 0 60px rgba(57,255,20,0.2);
+    }
+    .btn-green:hover { box-shadow: 0 0 30px rgba(57,255,20,0.7), 0 0 80px rgba(57,255,20,0.3); }
+
+    .btn-cyan {
+      background: transparent;
+      color: var(--cyan);
+      border: 2px solid var(--cyan);
+      box-shadow: 0 0 16px rgba(0,229,255,0.3), inset 0 0 16px rgba(0,229,255,0.05);
+    }
+    .btn-cyan:hover { background: rgba(0,229,255,0.08); }
+
+    .btn-outline {
+      background: transparent;
+      color: rgba(255,255,255,0.5);
+      border: 1px solid rgba(255,255,255,0.2);
+      font-size: 14px;
+      padding: 10px 24px;
+    }
+
+    /* ─── LOGIN SCREEN ─── */
+    #screen-login .logo-wrap { margin-bottom: 48px; }
+    #screen-login .tagline {
+      font-size: 15px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 56px;
+      line-height: 1.5;
+    }
+    #screen-login .btn-green { font-size: 17px; padding: 18px 44px; }
+
+    .spotify-icon {
+      width: 22px; height: 22px;
+      fill: currentColor;
+    }
+
+    .login-note {
+      margin-top: 20px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.25);
+      line-height: 1.6;
+    }
+
+    /* ─── SCANNER SCREEN ─── */
+    #screen-scanner {
+      padding: 0;
+      justify-content: flex-end;
+    }
+
+    #camera-feed {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    .scanner-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .scanner-darken {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+    }
+
+    .viewfinder {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -62%);
+      width: min(70vw, 280px);
+      height: min(70vw, 280px);
+    }
+
+    /* Corner brackets */
+    .vf-corner {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border-color: var(--green);
+      border-style: solid;
+    }
+    .vf-corner.tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+    .vf-corner.tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+    .vf-corner.bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+    .vf-corner.br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+    .scan-line {
+      position: absolute;
+      left: 3px; right: 3px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+      box-shadow: 0 0 8px var(--green), 0 0 20px rgba(57,255,20,0.5);
+      animation: scan 2.2s ease-in-out infinite;
+    }
+
+    @keyframes scan {
+      0%   { top: 3px; opacity: 1; }
+      45%  { top: calc(100% - 5px); opacity: 1; }
+      50%  { top: calc(100% - 5px); opacity: 0; }
+      55%  { top: 3px; opacity: 0; }
+      60%  { opacity: 1; }
+      100% { top: 3px; opacity: 1; }
+    }
+
+    .scanner-hint {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, calc(-62% + min(35vw, 140px) + 24px));
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .scanner-bottom {
+      position: relative;
+      z-index: 2;
+      pointer-events: auto;
+      width: 100%;
+      padding: calc(16px) 24px calc(var(--safe-bottom) + 24px);
+      background: linear-gradient(to top, rgba(0,0,0,0.95) 70%, transparent);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+
+    .scanner-title {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 22px;
+      color: var(--green);
+      text-shadow: 0 0 12px rgba(57,255,20,0.6);
+    }
+
+    /* ─── PLAYING SCREEN ─── */
+    #screen-playing { gap: 0; }
+
+    .playing-logo { margin-bottom: 32px; }
+    .playing-logo .hitty-logo { font-size: clamp(36px, 12vw, 64px); }
+    .playing-logo .hitty-sub { font-size: 11px; }
+
+    .question-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 8px 0 24px;
+    }
+
+    .question-glow {
+      position: absolute;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(57,255,20,0.15) 0%, transparent 70%);
+      animation: glow-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes glow-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.15); opacity: 1; }
+    }
+
+    .question-mark {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: clamp(100px, 32vw, 160px);
+      line-height: 1;
+      color: var(--green);
+      text-shadow: 0 0 30px rgba(57,255,20,0.8), 0 0 80px rgba(57,255,20,0.3);
+      animation: qmark-pulse 2.4s ease-in-out infinite;
+      position: relative;
+      z-index: 1;
+    }
+    @keyframes qmark-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+
+    /* Waveform */
+    .waveform {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      height: 48px;
+      margin-bottom: 36px;
+    }
+    .waveform-bar {
+      width: 4px;
+      border-radius: 2px;
+      background: var(--cyan);
+      box-shadow: 0 0 6px rgba(0,229,255,0.5);
+      animation: wave 1.2s ease-in-out infinite;
+    }
+    .waveform-bar:nth-child(1)  { animation-delay: 0.0s; }
+    .waveform-bar:nth-child(2)  { animation-delay: 0.1s; }
+    .waveform-bar:nth-child(3)  { animation-delay: 0.2s; }
+    .waveform-bar:nth-child(4)  { animation-delay: 0.3s; }
+    .waveform-bar:nth-child(5)  { animation-delay: 0.15s; }
+    .waveform-bar:nth-child(6)  { animation-delay: 0.05s; }
+    .waveform-bar:nth-child(7)  { animation-delay: 0.25s; }
+    .waveform-bar:nth-child(8)  { animation-delay: 0.35s; }
+    .waveform-bar:nth-child(9)  { animation-delay: 0.1s; }
+    .waveform-bar:nth-child(10) { animation-delay: 0.2s; }
+    .waveform-bar:nth-child(11) { animation-delay: 0.3s; }
+    .waveform-bar:nth-child(12) { animation-delay: 0.0s; }
+
+    @keyframes wave {
+      0%, 100% { height: 8px;  opacity: 0.5; }
+      50%       { height: 40px; opacity: 1;   }
+    }
+
+    /* Paused state – freeze bars */
+    .waveform.paused .waveform-bar {
+      animation-play-state: paused;
+      height: 12px;
+      opacity: 0.3;
+    }
+
+    .btn-next {
+      font-size: 20px;
+      padding: 18px 48px;
+      margin-bottom: 12px;
+    }
+
+    .playing-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .btn-pause-resume {
+      font-size: 14px;
+      padding: 10px 28px;
+      border-radius: 50px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.6);
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-pause-resume:active { opacity: 0.7; }
+
+    .status-msg {
+      font-size: 13px;
+      color: rgba(255,255,255,0.3);
+      margin-top: 4px;
+      min-height: 20px;
+    }
+
+    /* ─── ERROR TOAST ─── */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 80px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1a1a1a;
+      border: 1px solid rgba(255,60,60,0.5);
+      color: #ff6b6b;
+      font-size: 13px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 100;
+      max-width: 90vw;
+      white-space: normal;
+      text-align: center;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ─── LOADING SPINNER ─── */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(57,255,20,0.2);
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── HIDDEN CANVAS for jsQR ─── */
+    #qr-canvas {
+      position: fixed;
+      top: -9999px; left: -9999px;
+      opacity: 0; pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════ LOGIN ════════════════════════════════════════ -->
+<div id="screen-login" class="screen active">
+  <div class="logo-wrap">
+    <div class="hitty-logo">HITTY</div>
+    <div class="hitty-sub">Thomas &amp; Liza Edition</div>
+  </div>
+  <p class="tagline">Scanne die Karte · Erkenne den Song · Sag das Jahr</p>
+  <button class="btn btn-green" id="btn-login">
+    <svg class="spotify-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.314c-.213.33-.663.435-.993.222-2.718-1.661-6.14-2.037-10.172-1.116-.387.088-.775-.152-.863-.54-.088-.387.152-.775.54-.863 4.409-.998 8.191-.57 11.244 1.294.33.213.435.663.222.993zm1.47-3.266c-.27.415-.838.543-1.254.274-3.112-1.912-7.853-2.467-11.534-1.35-.441.133-.907-.115-1.04-.554-.133-.44.115-.907.554-1.04 4.208-1.277 9.434-.657 13.001 1.537.415.27.543.838.274 1.254v-.121zm.128-3.398c-3.73-2.216-9.884-2.419-13.44-1.338-.529.16-1.088-.136-1.248-.665-.16-.529.136-1.088.665-1.248 4.086-1.243 10.877-1.003 15.17 1.548.48.286.637.903.352 1.383-.286.48-.903.637-1.383.352l-.116-.032z"/>
+    </svg>
+    Mit Spotify anmelden
+  </button>
+  <p class="login-note">Spotify Premium erforderlich für die Wiedergabe</p>
+</div>
+
+<!-- ════════════════════════════════════════ SCANNER ════════════════════════════════════════ -->
+<div id="screen-scanner" class="screen">
+  <video id="camera-feed" autoplay playsinline muted></video>
+  <canvas id="qr-canvas"></canvas>
+
+  <div class="scanner-overlay">
+    <div class="scanner-darken"></div>
+    <div class="viewfinder">
+      <div class="vf-corner tl"></div>
+      <div class="vf-corner tr"></div>
+      <div class="vf-corner bl"></div>
+      <div class="vf-corner br"></div>
+      <div class="scan-line"></div>
+    </div>
+    <div class="scanner-hint">QR-Code in den Rahmen halten ❤️</div>
+  </div>
+
+  <div class="scanner-bottom">
+    <div class="scanner-title">HITTY</div>
+    <button class="btn btn-outline" id="btn-logout-scanner">Abmelden</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ PLAYING ════════════════════════════════════════ -->
+<div id="screen-playing" class="screen">
+  <div class="playing-logo">
+    <div class="hitty-logo">HITTY</div>
+    <div class="hitty-sub">Thomas &amp; Liza Edition</div>
+  </div>
+
+  <div class="question-wrap">
+    <div class="question-glow"></div>
+    <div class="question-mark">?</div>
+  </div>
+
+  <div class="waveform" id="waveform">
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+    <div class="waveform-bar"></div>
+  </div>
+
+  <div class="playing-controls">
+    <button class="btn btn-green btn-next" id="btn-next">Nächste Karte 🎴</button>
+    <button class="btn-pause-resume" id="btn-pause">⏸ Pausieren</button>
+    <div class="status-msg" id="status-msg"></div>
+  </div>
+</div>
+
+<!-- Error toast -->
+<div class="toast" id="toast"></div>
+
+<!-- jsQR als Fallback, falls BarcodeDetector nicht verfügbar -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script>
+// ════════════════════════════════════════════════════════════════════════
+//  CONFIGURATION
+// ════════════════════════════════════════════════════════════════════════
+const CLIENT_ID    = '5f34e1fcf4bc48bf94e569679a107a44';
+const REDIRECT_URI = 'https://rofldark.github.io/hittytl/';
+const SCOPES       = 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state';
+
+// ════════════════════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════════════════════
+let accessToken     = null;
+let refreshToken    = null;
+let tokenExpiry     = 0;          // ms epoch
+let spotifyPlayer   = null;
+let deviceId        = null;
+let cameraStream    = null;
+let scanLoop        = null;
+let isPaused        = false;
+let playerReady     = false;
+
+// ════════════════════════════════════════════════════════════════════════
+//  HELPERS – UI
+// ════════════════════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+let toastTimer = null;
+function showToast(msg, durationMs = 4000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), durationMs);
+}
+
+function setStatus(msg) {
+  document.getElementById('status-msg').textContent = msg;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  PKCE HELPERS
+// ════════════════════════════════════════════════════════════════════════
+function generateRandom(len) {
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function sha256(plain) {
+  const data = new TextEncoder().encode(plain);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return hash;
+}
+
+async function base64urlencode(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let str = '';
+  bytes.forEach(b => str += String.fromCharCode(b));
+  return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function generatePKCE() {
+  const verifier  = generateRandom(64);
+  const hashed    = await sha256(verifier);
+  const challenge = await base64urlencode(hashed);
+  return { verifier, challenge };
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  AUTH FLOW
+// ════════════════════════════════════════════════════════════════════════
+async function startLogin() {
+  const { verifier, challenge } = await generatePKCE();
+  localStorage.setItem('pkce_verifier', verifier);
+
+  // Preserve pending track if QR already scanned before auth
+  const pendingTrack = new URLSearchParams(window.location.search).get('t');
+  if (pendingTrack) localStorage.setItem('pending_track', pendingTrack);
+
+  const params = new URLSearchParams({
+    client_id:             CLIENT_ID,
+    response_type:         'code',
+    redirect_uri:          REDIRECT_URI,
+    code_challenge_method: 'S256',
+    code_challenge:        challenge,
+    scope:                 SCOPES,
+  });
+  window.location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
+}
+
+async function exchangeCode(code) {
+  const verifier = localStorage.getItem('pkce_verifier');
+  if (!verifier) throw new Error('Kein PKCE-Verifier gefunden');
+
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id:     CLIENT_ID,
+      grant_type:    'authorization_code',
+      code,
+      redirect_uri:  REDIRECT_URI,
+      code_verifier: verifier,
+    }),
+  });
+  if (!res.ok) throw new Error('Token-Austausch fehlgeschlagen: ' + res.status);
+  const data = await res.json();
+  saveTokens(data);
+  localStorage.removeItem('pkce_verifier');
+}
+
+async function refreshAccessToken() {
+  const rt = localStorage.getItem('refresh_token');
+  if (!rt) throw new Error('Kein Refresh Token');
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id:     CLIENT_ID,
+      grant_type:    'refresh_token',
+      refresh_token: rt,
+    }),
+  });
+  if (!res.ok) throw new Error('Refresh fehlgeschlagen: ' + res.status);
+  const data = await res.json();
+  saveTokens(data);
+}
+
+function saveTokens(data) {
+  accessToken  = data.access_token;
+  refreshToken = data.refresh_token || localStorage.getItem('refresh_token');
+  tokenExpiry  = Date.now() + (data.expires_in - 60) * 1000; // 1 min buffer
+
+  localStorage.setItem('access_token',  accessToken);
+  localStorage.setItem('refresh_token', refreshToken);
+  localStorage.setItem('token_expiry',  tokenExpiry);
+}
+
+function loadTokensFromStorage() {
+  accessToken  = localStorage.getItem('access_token');
+  refreshToken = localStorage.getItem('refresh_token');
+  tokenExpiry  = parseInt(localStorage.getItem('token_expiry') || '0', 10);
+}
+
+async function getValidToken() {
+  if (!accessToken) throw new Error('Nicht eingeloggt');
+  if (Date.now() > tokenExpiry) await refreshAccessToken();
+  return accessToken;
+}
+
+function logout() {
+  stopCamera();
+  if (spotifyPlayer) { spotifyPlayer.disconnect(); spotifyPlayer = null; }
+  playerReady = false; deviceId = null;
+  ['access_token','refresh_token','token_expiry','pending_track'].forEach(k => localStorage.removeItem(k));
+  accessToken = null; refreshToken = null;
+  showScreen('screen-login');
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  SPOTIFY WEB PLAYBACK SDK
+// ════════════════════════════════════════════════════════════════════════
+function loadSpotifySDK() {
+  return new Promise((resolve) => {
+    // If already loaded & ready
+    if (window._sdkReady) { resolve(); return; }
+    window._onSdkReady = resolve;
+    if (!document.getElementById('spotify-sdk')) {
+      const s = document.createElement('script');
+      s.id  = 'spotify-sdk';
+      s.src = 'https://sdk.scdn.co/spotify-player.js';
+      document.head.appendChild(s);
+    }
+  });
+}
+
+// This MUST be defined before SDK loads
+window.onSpotifyWebPlaybackSDKReady = () => {
+  window._sdkReady = true;
+  if (window._onSdkReady) { window._onSdkReady(); window._onSdkReady = null; }
+};
+
+async function initPlayer() {
+  await loadSpotifySDK();
+
+  spotifyPlayer = new Spotify.Player({
+    name: 'HITTY Player',
+    getOAuthToken: async (cb) => {
+      try { cb(await getValidToken()); }
+      catch(e) { console.error('Token error', e); logout(); }
+    },
+    volume: 0.8,
+  });
+
+  spotifyPlayer.addListener('ready', ({ device_id }) => {
+    deviceId    = device_id;
+    playerReady = true;
+    console.log('HITTY Player ready, device:', device_id);
+  });
+
+  spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+    playerReady = false;
+    console.warn('Player offline:', device_id);
+    setStatus('Player offline – bitte kurz warten …');
+  });
+
+  spotifyPlayer.addListener('initialization_error', ({ message }) => {
+    showToast('Initialisierungsfehler: ' + message);
+  });
+
+  spotifyPlayer.addListener('authentication_error', ({ message }) => {
+    showToast('Authentifizierungsfehler – bitte neu anmelden');
+    logout();
+  });
+
+  spotifyPlayer.addListener('account_error', ({ message }) => {
+    showToast('Spotify Premium erforderlich!');
+  });
+
+  spotifyPlayer.addListener('player_state_changed', (state) => {
+    if (!state) return;
+    isPaused = state.paused;
+    document.getElementById('waveform').classList.toggle('paused', isPaused);
+    document.getElementById('btn-pause').textContent = isPaused ? '▶ Weiter' : '⏸ Pausieren';
+  });
+
+  await spotifyPlayer.connect();
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  PLAYBACK
+// ════════════════════════════════════════════════════════════════════════
+async function playTrack(trackId) {
+  setStatus('Wird geladen …');
+  showScreen('screen-playing');
+  isPaused = false;
+  document.getElementById('waveform').classList.remove('paused');
+  document.getElementById('btn-pause').textContent = '⏸ Pausieren';
+
+  // Wait for player to be ready (up to 5s)
+  let waited = 0;
+  while (!playerReady && waited < 5000) {
+    await new Promise(r => setTimeout(r, 200));
+    waited += 200;
+  }
+  if (!playerReady) { showToast('Player nicht bereit – bitte kurz warten und erneut scannen'); showScreen('screen-scanner'); return; }
+
+  try {
+    const token = await getValidToken();
+    const res = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+      method:  'PUT',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ uris: [`spotify:track:${trackId}`] }),
+    });
+    if (res.status === 204 || res.ok) {
+      setStatus('');
+    } else {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || 'HTTP ' + res.status);
+    }
+  } catch(e) {
+    showToast('Fehler beim Abspielen: ' + e.message);
+    setStatus('Fehler – bitte erneut scannen');
+  }
+}
+
+async function togglePause() {
+  if (!spotifyPlayer) return;
+  await spotifyPlayer.togglePlay();
+}
+
+async function stopPlayback() {
+  if (!spotifyPlayer) return;
+  try {
+    const token = await getValidToken();
+    await fetch('https://api.spotify.com/v1/me/player/pause?device_id=' + deviceId, {
+      method:  'PUT',
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+  } catch(e) {
+    console.warn('Pause error', e);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  QR SCANNER
+// ════════════════════════════════════════════════════════════════════════
+async function startCamera() {
+  if (cameraStream) return; // already running
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    const video = document.getElementById('camera-feed');
+    video.srcObject = cameraStream;
+    await video.play();
+    startQRLoop();
+  } catch(e) {
+    showToast('Kamera-Zugriff verweigert: ' + e.message);
+    console.error(e);
+  }
+}
+
+function stopCamera() {
+  clearInterval(scanLoop);
+  scanLoop = null;
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  const video = document.getElementById('camera-feed');
+  video.srcObject = null;
+}
+
+function startQRLoop() {
+  const video  = document.getElementById('camera-feed');
+  const canvas = document.getElementById('qr-canvas');
+
+  let lastScanned = '';
+  let lastScanTs  = 0;
+  const COOLDOWN  = 3000;
+
+  function onCode(raw) {
+    const trackId = extractTrackId(raw);
+    if (!trackId) return;
+    const now = Date.now();
+    if (trackId === lastScanned && now - lastScanTs < COOLDOWN) return;
+    lastScanned = trackId;
+    lastScanTs  = now;
+    handleQRScan(trackId);
+  }
+
+  // Methode 1: BarcodeDetector (nativ in Chrome Android, kein CDN)
+  if ('BarcodeDetector' in window) {
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    scanLoop = setInterval(async () => {
+      if (video.readyState < 4) return;
+      try {
+        const results = await detector.detect(video);
+        if (results.length > 0) onCode(results[0].rawValue);
+      } catch(e) { /* frame skip */ }
+    }, 200);
+    return;
+  }
+
+  // Methode 2: jsQR (Fallback)
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  let sized = false;
+  scanLoop = setInterval(() => {
+    if (video.readyState < 4 || !video.videoWidth) return;
+    if (!sized) { canvas.width = video.videoWidth; canvas.height = video.videoHeight; sized = true; }
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    if (typeof jsQR === 'undefined') return;
+    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
+    if (code && code.data) onCode(code.data);
+  }, 150);
+}
+
+function extractTrackId(raw) {
+  // Matches:
+  // https://rofldark.github.io/hittytl/?t=TRACKID
+  // https://anyhost/?t=TRACKID
+  // spotify:track:TRACKID
+  // plain TRACKID (22 chars base62)
+  const urlMatch = raw.match(/[?&]t=([A-Za-z0-9]+)/);
+  if (urlMatch) return urlMatch[1];
+  const spotifyMatch = raw.match(/spotify:track:([A-Za-z0-9]+)/);
+  if (spotifyMatch) return spotifyMatch[1];
+  if (/^[A-Za-z0-9]{22}$/.test(raw.trim())) return raw.trim();
+  return null;
+}
+
+async function handleQRScan(trackId) {
+  stopCamera();
+  await stopPlayback();
+  await playTrack(trackId);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  APP INIT
+// ════════════════════════════════════════════════════════════════════════
+async function init() {
+  loadTokensFromStorage();
+  const urlParams = new URLSearchParams(window.location.search);
+  const code      = urlParams.get('code');
+  const error     = urlParams.get('error');
+  const trackId   = urlParams.get('t');
+
+  // Clean URL
+  if (code || error || trackId) {
+    history.replaceState({}, '', window.location.pathname);
+  }
+
+  // OAuth callback
+  if (error) {
+    showToast('Anmeldung abgebrochen: ' + error);
+    showScreen('screen-login');
+    return;
+  }
+
+  if (code) {
+    try {
+      await exchangeCode(code);
+    } catch(e) {
+      showToast('Anmeldung fehlgeschlagen: ' + e.message);
+      showScreen('screen-login');
+      return;
+    }
+  }
+
+  // Track scanned before auth
+  if (trackId) {
+    localStorage.setItem('pending_track', trackId);
+  }
+
+  // Logged in?
+  if (accessToken) {
+    await initPlayer();
+    showScreen('screen-scanner');
+    startCamera();
+
+    // Pending track?
+    const pending = localStorage.getItem('pending_track');
+    if (pending) {
+      localStorage.removeItem('pending_track');
+      await handleQRScan(pending);
+    }
+  } else {
+    showScreen('screen-login');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  EVENT LISTENERS
+// ════════════════════════════════════════════════════════════════════════
+document.getElementById('btn-login').addEventListener('click', startLogin);
+
+document.getElementById('btn-next').addEventListener('click', async () => {
+  await stopPlayback();
+  showScreen('screen-scanner');
+  await startCamera();
+});
+
+document.getElementById('btn-pause').addEventListener('click', togglePause);
+
+document.getElementById('btn-logout-scanner').addEventListener('click', () => {
+  if (confirm('Wirklich abmelden?')) logout();
+});
+
+// ════════════════════════════════════════════════════════════════════════
+//  START
+// ════════════════════════════════════════════════════════════════════════
+init().catch(e => {
+  console.error('Init error', e);
+  showToast('Fehler beim Starten: ' + e.message);
+  showScreen('screen-login');
+});
+</script>
+</body>
+</html>
